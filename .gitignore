@@ -1,0 +1,59 @@
+# Composer dependencies
+/vendor/
+composer.phar
+
+# Environment files
+.env
+.env.backup
+.env.production
+
+# PHP-CS cache
+.php_cs.cache
+.php-cs-fixer.cache
+
+# PHPUnit cache and coverage reports
+.phpunit.result.cache
+/coverage/
+
+# Logs
+/logs/*
+*.log
+
+# Cache and runtime data
+/cache/
+/tmp/
+
+# Application specific files
+/public/assets/uploads/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+/.fleet
+/.vscode
+*.code-workspace
+.project
+.settings/
+.tmproj
+*.esproj
+*.code-workspace
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+/build/
+/dist/
+/node_modules/
+
+# SSL Certificates (for development)
+*.pem
+*.key
+*.crt
+*.csr
+*.cert
+
+# Created by DevKraken <soman@devkraken.com> 
