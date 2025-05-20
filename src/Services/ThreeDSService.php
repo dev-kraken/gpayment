@@ -336,13 +336,28 @@ class ThreeDSService
 
             LogHelper::debug("Auth result response ($statusCode): " . json_encode($responseBody));
 
+            // Get transaction status
+            $transStatus = $responseBody['transStatus'] ?? 'Unknown';
+            
+            // Map transaction status to appropriate response
+            $statusMap = [
+                'Y' => ['status' => 'success', 'message' => 'Payment Authenticated Successfully'],
+                'N' => ['status' => 'failed', 'message' => 'Authentication Failed - Not Authenticated'],
+                'U' => ['status' => 'error', 'message' => 'Authentication Error - Technical Issue'],
+                'A' => ['status' => 'partial', 'message' => 'Authentication Attempted but Not Verified'],
+                'C' => ['status' => 'challenge', 'message' => 'Challenge Required'],
+                'D' => ['status' => 'decoupled', 'message' => 'Decoupled Authentication Required'],
+                'R' => ['status' => 'rejected', 'message' => 'Authentication Rejected by Issuer']
+            ];
+            
+            // Get mapped status or default to completed if unknown
+            $statusInfo = $statusMap[$transStatus] ?? ['status' => 'completed', 'message' => 'Authentication Completed'];
+
             // Standardize the response format
             return [
-                'status' => ($responseBody['transStatus'] ?? null) === 'Y' ? 'success' : 'completed',
-                'message' => ($responseBody['transStatus'] ?? null) === 'Y'
-                    ? 'Payment Authenticated Successfully'
-                    : 'Authentication Completed',
-                'transStatus' => $responseBody['transStatus'] ?? 'Unknown',
+                'status' => $statusInfo['status'],
+                'message' => $statusInfo['message'],
+                'transStatus' => $transStatus,
                 'details' => $responseBody
             ];
 

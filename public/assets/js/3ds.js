@@ -176,16 +176,109 @@ class ThreeDSPayment {
     showResult(result, isError = false) {
         this.processingSpinner.classList.add('hidden');
         this.resultContainer.classList.remove('hidden');
-
-        if (isError) {
+        
+        // Clear previous result content
+        this.resultContent.innerHTML = '';
+        
+        // If it's an error message (string)
+        if (typeof result === 'string') {
             this.resultContent.classList.add('text-danger');
-        } else {
+            this.resultContent.textContent = result;
+            return;
+        }
+        
+        // Remove error styling if not an error
+        if (!isError) {
             this.resultContent.classList.remove('text-danger');
         }
-
-        this.resultContent.textContent = typeof result === 'object'
-            ? JSON.stringify(result, null, 2)
-            : result;
+        
+        // Format object results based on status
+        if (typeof result === 'object') {
+            // Add status header
+            const statusHeader = document.createElement('h3');
+            
+            // Set status class and text based on status
+            if (result.status === 'success') {
+                statusHeader.className = 'text-success';
+                statusHeader.textContent = '✓ ' + (result.message || 'Payment Authenticated');
+            } else if (result.status === 'failed' || result.status === 'rejected' || result.status === 'error') {
+                statusHeader.className = 'text-danger';
+                statusHeader.textContent = '✗ ' + (result.message || 'Authentication Failed');
+            } else if (result.status === 'challenge') {
+                statusHeader.className = 'text-warning';
+                statusHeader.textContent = '⚠ ' + (result.message || 'Challenge Required');
+            } else if (result.status === 'decoupled') {
+                statusHeader.className = 'text-info';
+                statusHeader.textContent = '⟳ ' + (result.message || 'Decoupled Authentication Required');
+            } else if (result.status === 'partial') {
+                statusHeader.className = 'text-warning';
+                statusHeader.textContent = '△ ' + (result.message || 'Authentication Attempted');
+            } else {
+                statusHeader.className = 'text-info';
+                statusHeader.textContent = 'ⓘ ' + (result.message || 'Authentication Completed');
+            }
+            
+            this.resultContent.appendChild(statusHeader);
+            
+            // Add transaction status
+            if (result.transStatus) {
+                const transStatusEl = document.createElement('p');
+                transStatusEl.innerHTML = '<strong>Transaction Status:</strong> ' + this.getTransStatusDescription(result.transStatus);
+                this.resultContent.appendChild(transStatusEl);
+            }
+            
+            // Add raw details in collapsible section
+            if (result.details) {
+                const detailsContainer = document.createElement('div');
+                detailsContainer.className = 'details-container mt-3';
+                
+                const detailsToggle = document.createElement('button');
+                detailsToggle.className = 'btn btn-sm btn-outline-secondary';
+                detailsToggle.textContent = 'Show Technical Details';
+                detailsToggle.onclick = function() {
+                    const detailsContent = document.getElementById('details-content');
+                    if (detailsContent.style.display === 'none') {
+                        detailsContent.style.display = 'block';
+                        detailsToggle.textContent = 'Hide Technical Details';
+                    } else {
+                        detailsContent.style.display = 'none';
+                        detailsToggle.textContent = 'Show Technical Details';
+                    }
+                };
+                
+                const detailsContent = document.createElement('pre');
+                detailsContent.id = 'details-content';
+                detailsContent.className = 'mt-2 p-2 bg-light';
+                detailsContent.style.display = 'none';
+                detailsContent.textContent = JSON.stringify(result.details, null, 2);
+                
+                detailsContainer.appendChild(detailsToggle);
+                detailsContainer.appendChild(detailsContent);
+                this.resultContent.appendChild(detailsContainer);
+            }
+        } else {
+            // Fallback for unexpected formats
+            this.resultContent.textContent = JSON.stringify(result, null, 2);
+        }
+    }
+    
+    /**
+     * Get human-readable description for transaction status code
+     * @param {string} transStatus - Transaction status code
+     * @returns {string} Human-readable description
+     */
+    getTransStatusDescription(transStatus) {
+        const statusDescriptions = {
+            'Y': '<span class="badge bg-success">Authenticated (Y)</span> - Authentication verification successful',
+            'N': '<span class="badge bg-danger">Not Authenticated (N)</span> - Not authenticated/account not verified',
+            'U': '<span class="badge bg-secondary">Unauthenticated (U)</span> - Authentication could not be performed due to technical issue',
+            'A': '<span class="badge bg-warning">Attempted (A)</span> - Attempt processing performed but not authenticated',
+            'C': '<span class="badge bg-warning">Challenge Required (C)</span> - Additional authentication required',
+            'D': '<span class="badge bg-info">Decoupled Authentication (D)</span> - Decoupled Authentication confirmed',
+            'R': '<span class="badge bg-danger">Rejected (R)</span> - Authentication rejected by issuer'
+        };
+        
+        return statusDescriptions[transStatus] || `<span class="badge bg-secondary">Unknown (${transStatus})</span>`;
     }
 
     /**
@@ -457,11 +550,51 @@ class ThreeDSPayment {
             if (data.transStatus === 'C' && data.challengeUrl) {
                 // Challenge required
                 this.showChallenge(data.challengeUrl);
+            } else if (data.transStatus === 'D') {
+                // Decoupled Authentication required
+                this.showResult({
+                    status: 'decoupled',
+                    message: 'Decoupled Authentication Required - Please verify on your device',
+                    transStatus: data.transStatus,
+                    details: data
+                });
             } else if (data.transStatus === 'Y') {
                 // Authentication successful
                 this.showResult({
                     status: 'success',
                     message: 'Payment Authenticated Successfully',
+                    transStatus: data.transStatus,
+                    details: data
+                });
+            } else if (data.transStatus === 'N') {
+                // Not authenticated
+                this.showResult({
+                    status: 'failed',
+                    message: 'Authentication Failed - Not Authenticated',
+                    transStatus: data.transStatus,
+                    details: data
+                });
+            } else if (data.transStatus === 'U') {
+                // Unauthenticated due to technical issue
+                this.showResult({
+                    status: 'error',
+                    message: 'Authentication Error - Technical Issue',
+                    transStatus: data.transStatus,
+                    details: data
+                });
+            } else if (data.transStatus === 'A') {
+                // Attempted but not verified
+                this.showResult({
+                    status: 'partial',
+                    message: 'Authentication Attempted but Not Verified',
+                    transStatus: data.transStatus,
+                    details: data
+                });
+            } else if (data.transStatus === 'R') {
+                // Rejected by issuer
+                this.showResult({
+                    status: 'rejected',
+                    message: 'Authentication Rejected by Issuer',
                     transStatus: data.transStatus,
                     details: data
                 });
@@ -583,13 +716,19 @@ class ThreeDSPayment {
             this.processingSpinner.classList.add('hidden');
             this.challengeContainer.classList.add('hidden');
 
-            // Display result
-            this.showResult({
-                status: 'completed',
-                message: 'Challenge Completed',
-                transStatus: data.transStatus || 'Unknown',
+            // Get transaction status and map to appropriate messages
+            const transStatus = data.transStatus || 'Unknown';
+            
+            // Map status to appropriate title
+            let statusInfo = {
+                status: data.status || 'completed',
+                message: data.message || 'Authentication Completed',
+                transStatus: transStatus,
                 details: data
-            });
+            };
+            
+            // Display the formatted result
+            this.showResult(statusInfo);
 
             return true;
         } catch (error) {
