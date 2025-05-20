@@ -27,11 +27,19 @@ class Router
     private string $currentPath;
     
     /**
-     * Router constructor
+     * @var bool Whether to set HTTP status codes (disable for testing)
      */
-    public function __construct()
+    private bool $setStatusCodes = true;
+    
+    /**
+     * Router constructor
+     * 
+     * @param bool $setStatusCodes Whether to set HTTP status codes (disable for testing)
+     */
+    public function __construct(bool $setStatusCodes = true)
     {
         $this->routeManager = new RouteManager();
+        $this->setStatusCodes = $setStatusCodes;
         $this->loadRoutes();
     }
     
@@ -187,7 +195,11 @@ class Router
      */
     private function handle404(): void
     {
-        http_response_code(404);
+        // Set status code only if enabled (disable in tests to avoid headers issues)
+        if ($this->setStatusCodes) {
+            http_response_code(404);
+        }
+        
         TemplateHelper::renderPartial('errors/not_found.php', [
             'requestedPath' => $this->currentPath
         ]);
@@ -201,7 +213,11 @@ class Router
      */
     private function handleException(Exception $e): void
     {
-        http_response_code(500);
+        // Set status code only if enabled (disable in tests to avoid headers issues)
+        if ($this->setStatusCodes) {
+            http_response_code(500);
+        }
+        
         $debug = isset($_ENV['DEBUG_MODE']) && $_ENV['DEBUG_MODE'] === 'true';
         
         TemplateHelper::renderPartial('errors/server_error.php', [

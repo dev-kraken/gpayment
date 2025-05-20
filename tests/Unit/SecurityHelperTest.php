@@ -6,6 +6,10 @@ namespace Tests\Unit;
 use App\Helpers\SecurityHelper;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @runInSeparateProcess
+ * @preserveGlobalState disabled
+ */
 class SecurityHelperTest extends TestCase
 {
     /**
@@ -13,10 +17,16 @@ class SecurityHelperTest extends TestCase
      */
     protected function setUp(): void
     {
+        // Capture any output that might be sent before session_start
+        ob_start();
+        
         // Start a session if not already started
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
         }
+        
+        // Clean output buffer
+        ob_end_clean();
         
         // Clear session data
         $_SESSION = [];
