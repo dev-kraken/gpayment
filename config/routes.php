@@ -1,4 +1,8 @@
 <?php
+
+use App\Controllers\ApiController;
+use App\Controllers\NotificationController;
+
 /**
  * Routes Configuration
  * 
@@ -12,13 +16,13 @@
 return [
     // API routes
     'api' => [
-        'controller' => '\App\Controllers\ApiController',
+        'controller' => ApiController::class,
         'action' => 'handleRequest'
     ],
     
     // Notification route
     'notify' => [
-        'controller' => '\App\Controllers\NotificationController',
+        'controller' => NotificationController::class,
         'action' => 'handleNotification'
     ],
     
